@@ -173,6 +173,7 @@ def auth_callback():
     
     try:
         token = google.authorize_access_token()
+        print(f"Token: {token}")
         print(f"Token received successfully: {list(token.keys())}")
         print(f"User info: {token.get('userinfo', {}).get('email', 'No email')}")
         
@@ -477,6 +478,44 @@ def debug():
         'session_data': dict(session) if session else {}
     }
     return jsonify(debug_info)
+
+# ===== CREDENTIALS EXPORT ENDPOINTS FOR OTHER SERVICES =====
+
+@app.route('/api/credentials')
+def export_credentials():
+    """Export credentials for use in other services"""
+    if not is_authenticated():
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    return jsonify({
+        'access_token': session['credentials']['token'],
+        'refresh_token': session['credentials'].get('refresh_token'),
+        'token_uri': session['credentials']['token_uri'],
+        'client_id': session['credentials']['client_id'],
+        'client_secret': session['credentials']['client_secret'],
+        'scopes': session['credentials']['scopes'],
+        'user_email': session['user'].get('email')
+    })
+
+@app.route('/api/credentials/status')
+def get_credentials_status():
+    """Check if credentials are valid and active"""
+    if not is_authenticated():
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        service = get_gmail_service()
+        if service:
+            service.users().getProfile(userId='me').execute()
+            return jsonify({
+                'status': 'valid',
+                'user_email': session['user'].get('email'),
+                'message': 'Credentials are working correctly'
+            })
+        else:
+            return jsonify({'status': 'invalid', 'error': 'Failed to create service'}), 400
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
