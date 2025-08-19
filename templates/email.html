@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}{{ email.subject }} - Gmail Client{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Navigation Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('inbox') }}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Inbox
+            </a>
+            <div class="text-sm text-gray-500">
+                <i class="fas fa-clock mr-1"></i>
+                {{ email.date }}
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex items-center space-x-3">
+            <button onclick="window.print()"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                <i class="fas fa-print mr-2"></i>
+                Print
+            </button>
+            <button onclick="navigator.clipboard.writeText(window.location.href)"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                <i class="fas fa-link mr-2"></i>
+                Copy Link
+            </button>
+        </div>
+    </div>
+
+    <!-- Email Content -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100" x-data="{ 
+        showFullHeaders: false,
+        isLoading: false,
+        markAsRead() {
+            this.isLoading = true;
+            // Add read status logic here if needed
+            setTimeout(() => this.isLoading = false, 1000);
+        }
+    }">
+        
+        <!-- Email Header -->
+        <div class="px-8 py-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div class="flex items-start justify-between mb-6">
+                <div class="flex items-start space-x-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                        {{ email.from.split()[0][0].upper() if email.from.split() else 'U' }}
+                    </div>
+                    <div class="flex-1">
+                        <h1 class="text-2xl font-bold text-gray-900 mb-3 leading-tight">{{ email.subject }}</h1>
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-semibold text-gray-700 w-16">From:</span>
+                                <div class="flex-1">
+                                    {% set sender_parts = email.from.split('<') %}
+                                    {% if sender_parts|length > 1 %}
+                                        <span class="text-gray-900 font-medium">{{ sender_parts[0].strip().strip('"') }}</span>
+                                        <span class="text-gray-500 ml-2">&lt;{{ sender_parts[1].rstrip('>') }}&gt;</span>
+                                    {% else %}
+                                        <span class="text-gray-900 font-medium">{{ email.from }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-semibold text-gray-700 w-16">To:</span>
+                                <span class="text-gray-900">{{ email.to }}</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-semibold text-gray-700 w-16">Date:</span>
+                                <span class="text-gray-900">{{ email.date }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="flex items-center space-x-4 pt-4 border-t border-gray-200">
+                <button @click="markAsRead()" 
+                        :disabled="isLoading"
+                        class="inline-flex items-center px-4 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-lg text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 disabled:opacity-50">
+                    <i class="fas fa-check mr-2" x-show="!isLoading"></i>
+                    <i class="fas fa-spinner fa-spin mr-2" x-show="isLoading"></i>
+                    <span x-text="isLoading ? 'Marking...' : 'Mark as Read'"></span>
+                </button>
+                
+                <button @click="showFullHeaders = !showFullHeaders"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span x-text="showFullHeaders ? 'Hide Details' : 'Show Details'"></span>
+                </button>
+            </div>
+
+            <!-- Full Headers (collapsible) -->
+            <div x-show="showFullHeaders" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 transform scale-100"
+                 x-transition:leave-end="opacity-0 transform scale-95"
+                 class="mt-6 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Email Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-2">
+                        <p><span class="font-medium text-gray-700">Message ID:</span> <span class="text-gray-900 font-mono">{{ email.id }}</span></p>
+                        <p><span class="font-medium text-gray-700">From:</span> <span class="text-gray-900">{{ email.from }}</span></p>
+                    </div>
+                    <div class="space-y-2">
+                        <p><span class="font-medium text-gray-700">To:</span> <span class="text-gray-900">{{ email.to }}</span></p>
+                        <p><span class="font-medium text-gray-700">Date:</span> <span class="text-gray-900">{{ email.date }}</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Body -->
+        <div class="px-8 py-8">
+            <div class="prose max-w-none">
+                {% if email.body %}
+                    {% if '<html' in email.body.lower() or '<body' in email.body.lower() or '<div' in email.body.lower() %}
+                        <!-- HTML Email -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center text-sm text-blue-800">
+                                    <i class="fas fa-code mr-2"></i>
+                                    This email contains HTML content
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="toggleEmailView('iframe')" 
+                                            id="iframeBtn"
+                                            class="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-200 rounded-md hover:bg-blue-200 transition-all duration-200">
+                                        <i class="fas fa-eye mr-1"></i>
+                                        Iframe View
+                                    </button>
+                                    <button onclick="toggleEmailView('raw')" 
+                                            id="rawBtn"
+                                            class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 transition-all duration-200">
+                                        <i class="fas fa-code mr-1"></i>
+                                        Raw HTML
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Iframe View (Default) -->
+                        <div id="iframeView" class="email-content border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                            <div id="iframeLoading" class="flex items-center justify-center py-12">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
+                                    <p class="text-gray-600">Loading email content...</p>
+                                </div>
+                            </div>
+                            <iframe id="emailIframe" 
+                                    srcdoc="{{ email.body|e }}" 
+                                    class="w-full min-h-[600px] border-0 hidden"
+                                    sandbox="allow-same-origin allow-scripts allow-forms"
+                                    onload="iframeLoaded(this)"
+                                    onerror="iframeError()">
+                            </iframe>
+                        </div>
+                        
+                        <!-- Raw HTML View -->
+                        <div id="rawView" class="email-content border border-gray-200 rounded-lg p-6 bg-gray-900 text-gray-100 font-mono text-sm overflow-x-auto hidden">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-lg font-semibold">Raw HTML Code</h4>
+                                <button onclick="copyToClipboard('{{ email.body|e }}')" 
+                                        class="px-3 py-1 text-xs font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600 transition-all duration-200">
+                                    <i class="fas fa-copy mr-1"></i>
+                                    Copy HTML
+                                </button>
+                            </div>
+                            <pre><code>{{ email.body|e }}</code></pre>
+                        </div>
+                        
+                        <!-- Fallback Content View -->
+                        <div id="fallbackView" class="email-content border border-gray-200 rounded-lg p-6 bg-white shadow-sm overflow-hidden">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                <div class="flex items-center text-sm text-yellow-800">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    Iframe view failed. Showing fallback content.
+                                </div>
+                            </div>
+                            <div class="prose max-w-none">
+                                {{ email.body|safe }}
+                            </div>
+                        </div>
+                        
+                    {% else %}
+                        <!-- Plain Text Email -->
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                            <div class="whitespace-pre-wrap text-gray-800 leading-relaxed text-base font-mono">{{ email.body }}</div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-16">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">No Content Available</h3>
+                        <p class="text-gray-600 max-w-md mx-auto">This email appears to have no readable content or the content couldn't be loaded properly.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Email Footer -->
+        <div class="px-8 py-6 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    Securely loaded from Gmail API
+                </div>
+                <div class="flex items-center space-x-6 text-sm text-gray-500">
+                    <span class="flex items-center">
+                        <i class="fas fa-fingerprint mr-2"></i>
+                        ID: {{ email.id[:20] }}...
+                    </span>
+                    <span class="flex items-center">
+                        <i class="fas fa-calendar mr-2"></i>
+                        {{ email.date.split(',')[1].strip().split(' ')[:2]|join(' ') if ',' in email.date else email.date.split(' ')[:3]|join(' ') }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Email view switching functionality
+function toggleEmailView(viewType) {
+    const iframeView = document.getElementById('iframeView');
+    const rawView = document.getElementById('rawView');
+    const fallbackView = document.getElementById('fallbackView');
+    const iframeBtn = document.getElementById('iframeBtn');
+    const rawBtn = document.getElementById('rawBtn');
+    
+    // Hide all views
+    iframeView.classList.add('hidden');
+    rawView.classList.add('hidden');
+    fallbackView.classList.add('hidden');
+    
+    // Reset button styles
+    iframeBtn.className = 'px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 transition-all duration-200';
+    rawBtn.className = 'px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 transition-all duration-200';
+    
+    if (viewType === 'iframe') {
+        iframeView.classList.remove('hidden');
+        iframeBtn.className = 'px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-200 rounded-md hover:bg-blue-200 transition-all duration-200';
+    } else if (viewType === 'raw') {
+        rawView.classList.remove('hidden');
+        rawBtn.className = 'px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-200 rounded-md hover:bg-blue-200 transition-all duration-200';
+    } else {
+        fallbackView.classList.remove('hidden');
+    }
+}
+
+// Adjust iframe height based on content
+function adjustIframeHeight(iframe) {
+    try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const height = doc.body.scrollHeight;
+        iframe.style.height = Math.max(height + 50, 600) + 'px';
+    } catch (e) {
+        // If we can't access iframe content due to CORS, set a reasonable height
+        iframe.style.height = '800px';
+    }
+}
+
+// Handle iframe loaded successfully
+function iframeLoaded(iframe) {
+    const loading = document.getElementById('iframeLoading');
+    const iframeElement = document.getElementById('emailIframe');
+    
+    // Hide loading, show iframe
+    loading.classList.add('hidden');
+    iframeElement.classList.remove('hidden');
+    
+    // Adjust height
+    adjustIframeHeight(iframe);
+}
+
+// Handle iframe error
+function iframeError() {
+    const loading = document.getElementById('iframeLoading');
+    const iframeElement = document.getElementById('emailIframe');
+    
+    // Hide loading and iframe
+    loading.classList.add('hidden');
+    iframeElement.classList.add('hidden');
+    
+    // Show fallback view
+    showFallbackView();
+}
+
+// Show fallback view if iframe fails
+function showFallbackView() {
+    const iframeView = document.getElementById('iframeView');
+    const rawView = document.getElementById('rawView');
+    const fallbackView = document.getElementById('fallbackView');
+    
+    // Hide iframe view
+    iframeView.classList.add('hidden');
+    
+    // Show raw view
+    rawView.classList.remove('hidden');
+    
+    // Show fallback view
+    fallbackView.classList.remove('hidden');
+}
+
+// Copy HTML to clipboard
+function copyToClipboard(html) {
+    const textarea = document.createElement('textarea');
+    textarea.value = html;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert('HTML content copied to clipboard!');
+}
+
+// Initialize email view on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default view to iframe for HTML emails
+    const iframeView = document.getElementById('iframeView');
+    if (iframeView && !iframeView.classList.contains('hidden')) {
+        // Iframe view is visible by default, set timeout for loading
+        const iframe = document.getElementById('emailIframe');
+        if (iframe) {
+            // Set timeout for iframe loading (10 seconds)
+            setTimeout(function() {
+                const loading = document.getElementById('iframeLoading');
+                if (loading && !loading.classList.contains('hidden')) {
+                    // If still loading after timeout, show fallback
+                    iframeError();
+                }
+            }, 10000);
+        }
+    }
+});
+</script>
+
+<style>
+/* Email content styling */
+.email-content {
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+/* Iframe styling for HTML emails */
+#emailIframe {
+    background: white;
+    border-radius: 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Raw HTML view styling */
+#rawView pre {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#rawView code {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Fallback view styling */
+#fallbackView .prose {
+    max-width: none;
+}
+
+#fallbackView .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+#fallbackView .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+#fallbackView .prose td, #fallbackView .prose th {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#fallbackView .prose th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+#fallbackView .prose a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+#fallbackView .prose a:hover {
+    color: #2563eb;
+}
+
+#fallbackView .prose blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 16px;
+    margin: 16px 0;
+    color: #6b7280;
+}
+
+#fallbackView .prose pre {
+    background-color: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Enhanced email content styling */
+.email-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+.email-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.email-content td, .email-content th {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.email-content th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+.email-content a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.email-content a:hover {
+    color: #2563eb;
+}
+
+.email-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 16px;
+    margin: 16px 0;
+    color: #6b7280;
+}
+
+.email-content pre {
+    background-color: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+    
+    .email-content {
+        break-inside: avoid;
+    }
+    
+    .bg-gradient-to-r {
+        background: none !important;
+    }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .px-8 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .py-8 {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
